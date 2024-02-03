@@ -1,0 +1,5 @@
+Epoca	Inicio	Fim	Percentagem
+B	11/01	03/31	0
+I	04/01	05/31	50
+M	06/01	06/30	60
+A	06/01	08/31	100
