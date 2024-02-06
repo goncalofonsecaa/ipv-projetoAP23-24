@@ -1,5 +1,2 @@
 Torre	Andar	Numero	Vista	Qualidade	Max_Pessoas	Disponibilidade
-1	2	3	M	B	D	1
-1	2	4	M	S	T	1
-1	2	66	M	S	S	1
-1	2	77	M	B	T	1
+1	2	3	M	B	T	1

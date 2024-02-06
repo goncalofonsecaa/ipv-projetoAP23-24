@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 const int MAX_SERVICOS = 2000;
 const int BUFFER_SIZE = 1056;
@@ -33,10 +34,33 @@ typedef struct {
     // Outros campos necessários
 } ClienteProvisorio;
 
+typedef struct {
+  int codigo;
+  int codigoClienteDefinitivo;
+  char nome[50];
+  char morada[100];
+  char codigo_postal[15];
+  char localidade[50];
+  char nif[15];
+} ClienteSubordinado;
+
+typedef struct {
+    int codigo;
+    char nome[50];
+    char morada[100];
+    char codigo_postal[15];
+    char localidade[50];
+    char nif[15];
+    char data_criacao[15];
+    char tipo_cliente; // 'N' para Normal, 'V' para VIP, 'E' para Excelência
+    char bi[15];
+    // Outros campos necessários
+} ClienteDefinitivo;
+
 // Estrutura para representar a reserva
 typedef struct {
     int num_reserva;
-    int Nif_Cliente; // Código do cliente (provisório ou definitivo)
+    char Nif_Cliente[15]; // Código do cliente (provisório ou definitivo)
     char tipo_ficha_cliente; // 'P' para Provisória, 'D' para Definitiva
     char quarto_codigo[9]; // {torre}0{andar}0{numero}
     char data_checkin[15];
@@ -53,7 +77,6 @@ typedef struct {
 
 // Estrutura para representar os serviços complementares contratados
 typedef struct {
-    Quarto quarto_codigo;
     int funcionario_registo;
     char data_hora_registo[25];
     char tipo_servico[20];
@@ -103,12 +126,20 @@ typedef struct {
  
 // Estrutura para representar os dados de pagamento
 typedef struct {
+    char tipo_servico[20];
     int num_reserva;
-    float valor_pago;
-} Pagamento;
+    float valor;
+} CompraServico;
 
 
-void registrarQuarto(Quarto *lista_quartos, int *n_quartos) {
+typedef struct {
+  char codigo_cartao[5];
+  int num_reserva;
+  int estado; // 1 - ativo, 0 - inativo
+} Cartao;
+
+
+void registarQuarto(Quarto *lista_quartos, int *n_quartos) {
   Quarto quarto;
 
   printf("Digite a torre (1 ou 2): ");
@@ -146,8 +177,8 @@ void registrarQuarto(Quarto *lista_quartos, int *n_quartos) {
     }
   }
 
-  printf ("Qual a vista do quarto (M ou P): ");
-  scanf (" %c", &quarto.vista);
+  printf("Qual a vista do quarto (M ou P): ");
+  scanf(" %c", &quarto.vista);
 
   if (quarto.vista != 'M' && quarto.vista != 'P') {
     printf("Entrada inválida para vista.\n");
@@ -594,31 +625,39 @@ void listarServicos(TabelaServicos *listaServicos, int num_servicos) {
 void criarFichaClienteProvisorio(ClienteProvisorio *listaClientesProvisorios, int *n_clientes_provisorios) {
   ClienteProvisorio cliente_provisorio;
 
+  
+
   printf("Qual o nome do cliente: ");
-  scanf("  %s", cliente_provisorio.nome);
+  scanf(" %s", cliente_provisorio.nome);
 
   printf("Qual a morada do cliente: ");
-  scanf("  %s", cliente_provisorio.morada);
+  scanf(" %s", cliente_provisorio.morada);
 
   printf("Qual o código postal do cliente: ");
-  scanf("  %s", cliente_provisorio.codigo_postal);
+  scanf(" %s", cliente_provisorio.codigo_postal);
 
   printf("Qual a localidade do cliente: ");
   scanf(" %s", cliente_provisorio.localidade);
 
   printf("Qual o NIF do cliente: ");
-  scanf("  %s", cliente_provisorio.nif);
+  scanf(" %s", cliente_provisorio.nif);
 
   printf("Qual a data de criação da ficha do cliente: ");
-  scanf("  %s", cliente_provisorio.data_criacao);
+  scanf(" %s", cliente_provisorio.data_criacao);
 
   printf("Qual o tipo de cliente (N, V ou E): ");
-  scanf("  %c", &cliente_provisorio.tipo_cliente);
+  scanf(" %c", &cliente_provisorio.tipo_cliente);
+
+
+
+  //COLOCAR ESTADO P Default e campo de bi null
 
   listaClientesProvisorios[*n_clientes_provisorios] = cliente_provisorio;
   (*n_clientes_provisorios)++;
 
   printf("Ficha de cliente provisório criada com sucesso!\n");
+
+  
 }
 
 //escrever no ficheiro ficha cliente provisorio
@@ -696,6 +735,65 @@ void lerFichClientesProv (ClienteProvisorio *cliente_provisorio, int *n_clientes
 
   }
 }
+
+void lerFichClientesDefinitivos (ClienteDefinitivo *cliente_definitivo, int *n_clientes_definitivos) {
+  FILE *fich_clientes_definitivos = fopen("clientes_definitivos.txt", "r");
+
+  if (fich_clientes_definitivos == NULL) {
+    printf("Não foi possível abrir o ficheiro de clientes definitivos!\n");
+    return;
+  }
+
+  char buffer[BUFFER_SIZE];
+  int linha_cont = 0; //contador de linhas
+
+  // serve para ler a primeira linha de texto (cabeçalho) e ignorar
+  fgets(buffer, BUFFER_SIZE, fich_clientes_definitivos);
+
+  while (fgets(buffer, BUFFER_SIZE, fich_clientes_definitivos) != NULL && *n_clientes_definitivos < MAX_SERVICOS - 1) {
+    char linha[BUFFER_SIZE];
+    strcpy(linha, buffer);
+
+    char *nome = strtok(linha, "\t");
+    char *morada = strtok(NULL, "\t");
+    char *codigo_postal = strtok(NULL, "\t");
+    char *localidade = strtok(NULL, "\t");
+    char *nif = strtok(NULL, "\t");
+    char *data_criacao = strtok(NULL, "\t");
+    char *tipo_cliente = strtok(NULL, "\t");
+    char *bi = strtok(NULL, "\t");
+
+    if (nome == NULL || morada == NULL || codigo_postal == NULL || localidade == NULL || nif == NULL || data_criacao == NULL || tipo_cliente == NULL || bi == NULL) {
+      fprintf(stderr, "Erro na leitura dos campos do ficheiro de clientes\n");
+      return;
+    }
+
+    strcpy(cliente_definitivo[*n_clientes_definitivos].nome, nome);
+    strcpy(cliente_definitivo[*n_clientes_definitivos].morada, morada);
+    strcpy(cliente_definitivo[*n_clientes_definitivos].codigo_postal, codigo_postal);
+    strcpy(cliente_definitivo[*n_clientes_definitivos].localidade, localidade);
+    strcpy(cliente_definitivo[*n_clientes_definitivos].nif, nif);
+    strcpy(cliente_definitivo[*n_clientes_definitivos].data_criacao, data_criacao);
+    cliente_definitivo[*n_clientes_definitivos].tipo_cliente = *tipo_cliente;
+    strcpy(cliente_definitivo[*n_clientes_definitivos].bi, bi);
+
+    (*n_clientes_definitivos)++;
+
+    linha_cont++;
+
+    if (linha_cont >= MAX_SERVICOS) {
+      fprintf(stderr, "Foi atingido o numero máximo de clientes definitivos!\n");
+      return;
+    }
+
+    if (*n_clientes_definitivos >= MAX_SERVICOS) {
+      fprintf(stderr, "Foi atingido o numero maximo de clientes definitivos!\n");
+      return;
+    }
+  }
+}
+
+
 
 //funçao para alterar ficha cliente provisorio
 
@@ -959,7 +1057,7 @@ void transformarCodigoQuartoInverso(char *codigo, int *torre, int *andar, int *n
 
 //verificar se nif da ficha provisoria existe na ficha cliente
 
-int verificarNIFCliente (ClienteProvisorio *listaClientesProvisorios, int n_clientes_provisorios, char nif[15]) {
+int verificarNIFCliente (ClienteProvisorio *listaClientesProvisorios, int n_clientes_provisorios, char *nif) {
   for (int indiceClienteProvisorio = 0; indiceClienteProvisorio < n_clientes_provisorios; indiceClienteProvisorio++) {
     if (strcmp(listaClientesProvisorios[indiceClienteProvisorio].nif, nif) == 0) {
       return 1;
@@ -1071,7 +1169,7 @@ float calcularValorTotalReserva(TabelaPrecosBase *precos_base, int n_precos_base
   return valor_total;
 }
 
-//verificar reserva que vai incluir quartos , tabela preco base , tabela adicional epoca e ficha cliente provisoria
+
 
 void criarReserva(Reserva *reservas, int *n_reservas, int *num_reserva, Quarto *quartos, int n_quartos, TabelaPrecosBase *precos_base, int n_precos_base, TabelaAdicionalEpoca *adicional_epoca, int n_epoca, ClienteProvisorio *clientes_provisorios, int n_clientes_provisorios) {
 
@@ -1145,6 +1243,8 @@ void criarReserva(Reserva *reservas, int *n_reservas, int *num_reserva, Quarto *
   (*num_reserva)++;
   reserva.num_reserva = *num_reserva;
 
+  strcpy(reserva.Nif_Cliente, nif);
+
   strcpy(reserva.quarto_codigo, transformarCodigoQuarto(torre, andar, numero));
 
   //data check in
@@ -1180,29 +1280,25 @@ void criarReserva(Reserva *reservas, int *n_reservas, int *num_reserva, Quarto *
   printf("Qual o valor adiantado (total: %.02f): ", reserva.valor_total);
   scanf("%f", &reserva.valor_pago);
  
-  if (reserva.valor_pago < reserva.valor_total / 3) {
-    printf("O valor adiantado tem de ser pelo menos 1/3 do valor total.\n");
+  if (reserva.valor_pago < reserva.valor_total / 4) {
+    printf("O valor adiantado tem de ser pelo menos 1/4 do valor total.\n");
     return;
   }
 
   printf("Qual a forma de pagamento: ");
   scanf("%s", reserva.forma_pagamento);
 
-  printf("Qual a situação da reserva (P, C, O ou F): ");
-  scanf(" %c", &reserva.situacao_reserva);
+  //definir a situaçao da reserva como P
+  reserva.situacao_reserva = 'P';
+
+
+
+  /*printf("Qual a situação da reserva (P, C, O ou F): ");
+  scanf(" %c", &reserva.situacao_reserva);*/
 
   printf("Qual a observação: ");
   scanf(" %s", reserva.observacoes);
-
-
-//mudar estado do quarto 
-
-  // for (int i = 0; i < n_quartos; i++) {
-  //   if (quartos[i].torre == torre && quartos[i].andar == andar && quartos[i].numero == numero) {
-  //     quartos[i].disponibilidade = 0;
-  //     break;
-  //   }
-  // }
+   
 
   //printar reserva com sucesso e a frente mostrar o numero de reserva
 
@@ -1255,9 +1351,19 @@ void escreverFichReservas(Reserva reservas[], int n_reservas) {
 
 //listar reservas
 
-void listarReservas(Reserva *reservas, int n_reservas) {
+void listarReservas(Reserva *reservas, int n_reservas, Cartao *cartoes, int n_cartoes) {
   for (int indiceReserva = 0; indiceReserva < n_reservas; indiceReserva++) {
+    int indiceCartao = -1;
+
+    for (int i = 0; i < n_cartoes; i++) {
+      if (reservas[indiceReserva].num_reserva == cartoes[i].num_reserva) {
+        indiceCartao = i;
+        break;
+      }
+    }
+
     printf("Número de Reserva: %d\n", reservas[indiceReserva].num_reserva);
+    printf("NIF do Cliente: %s\n", reservas[indiceReserva].Nif_Cliente);
     printf("Código do Quarto: %s\n", reservas[indiceReserva].quarto_codigo);
     printf("Data de Check-in: %s\n", reservas[indiceReserva].data_checkin);
     printf("Data de Check-out: %s\n", reservas[indiceReserva].data_checkout);
@@ -1267,16 +1373,784 @@ void listarReservas(Reserva *reservas, int n_reservas) {
     printf("Forma de Pagamento: %s\n", reservas[indiceReserva].forma_pagamento);
     printf("Situação da Reserva: %c\n", reservas[indiceReserva].situacao_reserva);
     printf("Observações: %s\n", reservas[indiceReserva].observacoes);
+    
+    if (indiceCartao != -1) {
+      printf("Código de Cartão: %s (estado: %d)\n", cartoes[indiceCartao].codigo_cartao, cartoes[indiceCartao].estado);
+    } else {
+      printf("Código de Cartão: Não criado\n");
+    }
+
     printf("\n");
     printf("--------------------------------\n");
   }
 }
 
-  
+void removerClienteProvisorio(int indice, ClienteProvisorio *clientes_provisorios, int *n_clientes_provisorios) {
+  for (int i = indice; i < *n_clientes_provisorios - 1; i++) {
+    clientes_provisorios[i] = clientes_provisorios[i + 1];
+  }
 
+  (*n_clientes_provisorios)--;
+}
+
+void criarCodigoCartao(char *codigo) {
+  for (int i = 0; i < 4; i++) {
+    codigo[i] = (rand() % 10) + '0';
+  }
+
+  codigo[4] = '\0';
+}
+
+void fazerCheckIn (Reserva *reservas, int n_reservas, Quarto *quartos, int n_quartos, ClienteProvisorio *clientes_provisorios, int *n_clientes_provisorios, ClienteDefinitivo *clientes_definitivos, int *n_clientes_definitivos , ClienteSubordinado *clientes_subordinados, int *n_clientes_subordinados, Cartao *cartoes, int *n_cartoes) {
+  int num_reserva;
+
+  printf("Qual o número da reserva: ");
+  scanf("%d", &num_reserva);
+
+  int indiceReserva = -1;
+
+  for (int indice = 0; indice < n_reservas; indice++) {
+    if (reservas[indice].num_reserva == num_reserva) {
+      indiceReserva = indice;
+      break;
+    }
+  }
+
+  if (indiceReserva == -1) {
+    printf("Não existe nenhuma reserva com esse número.\n");
+    return;
+  }
+
+  int indiceClienteProvisorio = -1;
+
+  printf("nif cliente: %s\n", reservas[indiceReserva].Nif_Cliente);
+
+  for (int i = 0; i < *n_clientes_provisorios; i++){
+    if (strcmp(reservas[indiceReserva].Nif_Cliente, clientes_provisorios[i].nif) == 0){
+      indiceClienteProvisorio = i;
+      break;
+    }
+  }
+  
+  if (indiceClienteProvisorio == -1) {
+    printf("Não existe nenhum cliente provisório com esse NIF.\n");
+    return;
+  }
+
+  ClienteDefinitivo cliente_definitivo;
+
+  strcpy(cliente_definitivo.nome, clientes_provisorios[indiceClienteProvisorio].nome);
+  strcpy(cliente_definitivo.morada, clientes_provisorios[indiceClienteProvisorio].morada);
+  strcpy(cliente_definitivo.codigo_postal, clientes_provisorios[indiceClienteProvisorio].codigo_postal);
+  strcpy(cliente_definitivo.localidade, clientes_provisorios[indiceClienteProvisorio].localidade);
+  strcpy(cliente_definitivo.nif, clientes_provisorios[indiceClienteProvisorio].nif);
+  strcpy(cliente_definitivo.data_criacao, clientes_provisorios[indiceClienteProvisorio].data_criacao);
+  cliente_definitivo.tipo_cliente = clientes_provisorios[indiceClienteProvisorio].tipo_cliente;
+
+  //pedir o BI 
+  printf("Qual o BI do cliente: ");
+  scanf("%s", cliente_definitivo.bi);
+
+  clientes_definitivos[*n_clientes_definitivos] = cliente_definitivo;
+  (*n_clientes_definitivos)++;
+
+  removerClienteProvisorio(indiceClienteProvisorio, clientes_provisorios, n_clientes_provisorios);
+
+  reservas[indiceReserva].situacao_reserva = 'C';
+
+  int indiceQuarto = -1;
+  char *codigo_quarto = reservas[indiceReserva].quarto_codigo;
+
+  for (int indice = 0; indice < n_quartos; indice++) {
+    if (strcmp(reservas[indiceReserva].quarto_codigo, codigo_quarto) == 0) {
+      indiceQuarto = indice;
+      break;
+    }
+  }
+
+  if (indiceQuarto == -1) {
+    printf("Não existe nenhum quarto com esse código.\n");
+    return;
+  }
+
+  quartos[indiceQuarto].disponibilidade = 0;
+
+  int num_clientes_subordinados;
+ 
+  printf("Quantos clientes subordinados deseja adicionar?");
+  scanf("%d", &num_clientes_subordinados);
+
+  for (int i = 0; i < num_clientes_subordinados; i++) {
+    ClienteSubordinado cliente_subordinado;
+
+    //perguntar campos que estao na struct cliente subordinado
+
+    printf("Qual o nome do cliente subordinado: ");
+    scanf("%s", cliente_subordinado.nome);
+
+    printf("Qual a morada do cliente subordinado: ");
+    scanf("%s", cliente_subordinado.morada);
+
+    printf("Qual o código postal do cliente subordinado: ");
+    scanf("%s", cliente_subordinado.codigo_postal);
+
+    printf("Qual a localidade do cliente subordinado: ");
+    scanf("%s", cliente_subordinado.localidade);
+
+    printf("Qual o NIF do cliente subordinado: ");
+    scanf("%s", cliente_subordinado.nif);
+
+    clientes_subordinados[*n_clientes_subordinados] = cliente_subordinado;
+    (*n_clientes_subordinados)++;
+  }
+
+  printf("Check-in efetuado com sucesso!\n");
+
+  Cartao cartao;
+
+  cartao.num_reserva = num_reserva;
+  cartao.estado = 1;
+
+  char codigo_cartao[5];
+  criarCodigoCartao(codigo_cartao);
+
+  strcpy(cartao.codigo_cartao, codigo_cartao);
+
+  printf("Código do cartão: %s\n", codigo_cartao);
+
+  cartoes[*n_cartoes] = cartao;
+  (*n_cartoes)++;
+}
+
+void fazerCheckOut(Cartao *cartoes, int n_cartoes, Reserva *reservas, int n_reservas, Quarto *quartos, int n_quartos, CompraServico *compras_servicos, int n_compras_servicos) {
+  char codigo_cartao[5];
+  printf("Qual o código do cartão: ");
+  scanf("%s", codigo_cartao);
+
+  int indiceCartao = -1;
+
+  for (int indice = 0; indice < n_cartoes; indice++) {
+    if (strcmp(cartoes[indice].codigo_cartao, codigo_cartao) == 0) {
+      indiceCartao = indice;
+      break;
+    }
+  }
+
+  if (indiceCartao == -1) {
+    printf("Não existe nenhum cartão com esse código.\n");
+    return;
+  }
+
+  if (cartoes[indiceCartao].estado == 0) {
+    printf("O cartão não está ativo.\n");
+    return;
+  }
+
+  int num_reserva = cartoes[indiceCartao].num_reserva;
+  int indiceReserva = -1;
+
+  for (int indice = 0; indice < n_reservas; indice++) {
+    if (reservas[indice].num_reserva == num_reserva) {
+      indiceReserva = indice;
+      break;
+    }
+  }
+
+  if (indiceReserva == -1) {
+    printf("Não existe nenhuma reserva com esse número.\n");
+    return;
+  }
+
+  if (reservas[indiceReserva].situacao_reserva == 'F') {
+    printf("A reserva já foi fechada.\n");
+    return;
+  }
+  
+  float valor_em_falta_reserva = reservas[indiceReserva].valor_total - reservas[indiceReserva].valor_pago;
+  float valor_servicos = 0.0;
+
+  for (int i = 0; i < n_compras_servicos; i++) {
+    if (compras_servicos[i].num_reserva == num_reserva) {
+      valor_servicos += compras_servicos[i].valor;
+    }
+  }
+
+  float valor_em_falta = valor_em_falta_reserva + valor_servicos;
+
+  printf("Valor em falta (%.2f reserva + %.2f serviços): %.2f\n", valor_em_falta_reserva, valor_servicos, valor_em_falta);
+
+  while (valor_em_falta > 0.0) {
+    printf("Qual o valor a pagar: ");
+    float valor_pago;
+    scanf("%f", &valor_pago);
+
+    if (valor_pago > valor_em_falta) {
+      printf("O valor pago é superior ao valor em falta.\n");
+      continue;
+    }
+
+    valor_em_falta -= valor_pago;
+    printf("Valor em falta: %.2f\n", valor_em_falta);
+  }
+
+  // Proceder com o check-out
+  
+  reservas[indiceReserva].situacao_reserva = 'F';
+
+  int indiceQuarto = -1;
+  char *codigo_quarto = reservas[indiceReserva].quarto_codigo;
+
+  for (int indice = 0; indice < n_quartos; indice++) {
+    if (strcmp(reservas[indiceReserva].quarto_codigo, codigo_quarto) == 0) {
+      indiceQuarto = indice;
+      break;
+    }
+  }
+
+  if (indiceQuarto == -1) {
+    printf("Não existe nenhum quarto com esse código.\n");
+    return;
+  }
+
+  quartos[indiceQuarto].disponibilidade = 1;
+  cartoes[indiceCartao].estado = 0;
+}
+
+//ler nos clientes_subordinados
+
+void lerFichClientesSubordinados(ClienteSubordinado *clientes_subordinados, int *n_clientes_subordinados) {
+  FILE *fich_clientes_subordinados = fopen("clientes_subordinados.txt", "r");
+
+  if (fich_clientes_subordinados == NULL) {
+    printf("Não foi possível abrir o ficheiro de clientes subordinados!\n");
+    return;
+  }
+
+  char buffer[BUFFER_SIZE];
+  int linha_cont = 0; //contador de linhas
+
+  // serve para ler a primeira linha de texto (cabeçalho) e ignorar
+  fgets(buffer, BUFFER_SIZE, fich_clientes_subordinados);
+
+  #define MAX_CLIENTES_SUBORDINADOS 100
+
+  while (fgets(buffer, BUFFER_SIZE, fich_clientes_subordinados) != NULL && *n_clientes_subordinados < MAX_CLIENTES_SUBORDINADOS - 1) {
+    char linha[BUFFER_SIZE];
+    strcpy(linha, buffer);
+
+    char *nome = strtok(linha, "\t");
+    char *morada = strtok(NULL, "\t");
+    char *codigo_postal = strtok(NULL, "\t");
+    char *localidade = strtok(NULL, "\t");
+    char *nif = strtok(NULL, "\t");
+
+    if (nome == NULL || morada == NULL || codigo_postal == NULL || localidade == NULL || nif == NULL) {
+      fprintf(stderr, "Erro na leitura dos campos do ficheiro de clientes subordinados\n");
+      return;
+    }
+
+    strcpy(clientes_subordinados[*n_clientes_subordinados].nome, nome);
+    strcpy(clientes_subordinados[*n_clientes_subordinados].morada, morada);
+    strcpy(clientes_subordinados[*n_clientes_subordinados].codigo_postal, codigo_postal);
+    strcpy(clientes_subordinados[*n_clientes_subordinados].localidade, localidade);
+    strcpy(clientes_subordinados[*n_clientes_subordinados].nif, nif);
+
+    (*n_clientes_subordinados)++;
+    linha_cont++;
+
+    if (linha_cont >= MAX_CLIENTES_SUBORDINADOS) {
+      fprintf(stderr, "Foi atingido o numero máximo de clientes subordinados!\n");
+      return;
+    }
+
+    if (*n_clientes_subordinados >= MAX_CLIENTES_SUBORDINADOS) {
+      fprintf(stderr, "Foi atingido o numero maximo de clientes subordinados!\n");
+      return;
+    }
+  }
+} 
+
+//usar cartao para comprar serviços 
+
+void comprarServicos(Cartao *cartoes, int n_cartoes, TabelaServicos *servicos, int n_servicos , Reserva *reservas, int n_reservas, CompraServico *compras_servicos, int *n_compras_servicos) {
+  char codigo_cartao[5];
+
+  printf("Qual o código do cartão: ");
+  scanf("%s", codigo_cartao);
+  
+  int indiceCartao = -1;
+
+  for (int indice = 0; indice < n_cartoes; indice++) {
+    if (strcmp(cartoes[indice].codigo_cartao, codigo_cartao) == 0) {
+      indiceCartao = indice;
+      break;
+    }
+  }
+
+  if (indiceCartao == -1) {
+    printf("Não existe nenhum cartão com esse código.\n");
+    return;
+  }
+
+  if (cartoes[indiceCartao].estado == 0) {
+    printf("O cartão não está ativo.\n");
+    return;
+  }
+
+  int num_reserva = cartoes[indiceCartao].num_reserva;
+
+  int indiceReserva = -1;
+
+  for (int indice = 0; indice < n_reservas; indice++) {
+    if (reservas[indice].num_reserva == num_reserva) {
+      indiceReserva = indice;
+      break;
+    }
+  }
+
+  if (indiceReserva == -1) {
+    printf("Não existe nenhuma reserva com esse número.\n");
+    return;
+  }
+
+  if (reservas[indiceReserva].situacao_reserva != 'C') {
+    printf("A reserva não está confirmada.\n");
+    return;
+  }
+
+  char nome_servico[50];
+
+  printf("Qual o nome do serviço: ");
+  scanf("%s", nome_servico);
+
+  int indiceServico = -1;
+
+  for (int indice = 0; indice < n_servicos; indice++) {
+    if (strcmp(servicos[indice].tipo_servico, nome_servico) == 0) {
+      indiceServico = indice;
+      break;
+    }
+  }
+
+  if (indiceServico == -1) {
+    printf("Não existe nenhum serviço com esse nome.\n");
+    return;
+  }
+
+  CompraServico compra_servico;
+
+  compra_servico.num_reserva = num_reserva;
+  strcpy(compra_servico.tipo_servico, servicos[indiceServico].tipo_servico);
+  compra_servico.valor = servicos[indiceServico].valor;
+
+  compras_servicos[*n_compras_servicos] = compra_servico;
+  (*n_compras_servicos)++;
+
+  printf("Serviço comprado com sucesso!\n");
+}
+
+//escrever nos clientes subordinados
+
+void escreverFichClientesSubordinados(ClienteSubordinado *clientes_subordinados, int n_clientes_subordinados) {
+  FILE *fich_clientes_subordinados = fopen("clientes_subordinados.txt", "w");
+
+  if (fich_clientes_subordinados == NULL) {
+  printf("Erro ao abrir o ficheiro de clientes definitivos!\n");
+  return;
+}
+
+  if (fich_clientes_subordinados == NULL) {
+    printf("Não foi possível abrir o ficheiro de clientes subordinados!\n");
+    return;
+  }
+
+  fprintf(fich_clientes_subordinados, "Nome\tMorada\tCódigo_Postal\tLocalidade\tNIF\n");
+
+  for (int i = 0; i < n_clientes_subordinados; i++) {
+    fprintf(fich_clientes_subordinados, "%s\t%s\t%s\t%s\t%s\n", clientes_subordinados[i].nome, clientes_subordinados[i].morada, clientes_subordinados[i].codigo_postal, clientes_subordinados[i].localidade, clientes_subordinados[i].nif);
+  }
+
+  fclose(fich_clientes_subordinados);
+}
+
+void escreverFichClientesDefinitivos (ClienteDefinitivo *clientes_definitivos, int n_clientes_definitivos) {
+  FILE *fich_clientes_definitivos = fopen("clientes_definitivos.txt", "w");
+
+  if (fich_clientes_definitivos == NULL) {
+    printf("Erro ao abrir o ficheiro de clientes definitivos!\n");
+    return;
+  }
+
+  fprintf(fich_clientes_definitivos, "Nome\tMorada\tCódigo Postal\tLocalidade\tNIF\tBI\n");
+
+  for (int i = 0; i < n_clientes_definitivos; i++) {
+    fprintf(fich_clientes_definitivos, "%s\t%s\t%s\t%s\t%s\t%s\n", clientes_definitivos[i].nome, clientes_definitivos[i].morada, clientes_definitivos[i].codigo_postal, clientes_definitivos[i].localidade, clientes_definitivos[i].nif, clientes_definitivos[i].bi);
+  }
+
+  fclose(fich_clientes_definitivos);
+}
+
+void lerFichCartoes(Cartao *cartoes, int *n_cartoes) {
+  FILE *fich_cartoes = fopen("cartoes.dat", "rb");
+
+  if (fich_cartoes == NULL) {
+    printf("Não foi possível abrir o ficheiro de cartões!\n");
+    return;
+  }
+
+  fread(n_cartoes, sizeof(int), 1, fich_cartoes);
+
+  for (int i = 0; i < *n_cartoes; i++) {
+    fread(&cartoes[i], sizeof(Cartao), 1, fich_cartoes);
+  }
+
+  fclose(fich_cartoes);
+}
+
+void escreverFichCartoes(Cartao *cartoes, int n_cartoes) {
+  FILE *fich_cartoes = fopen("cartoes.dat", "wb+");
+
+  if (fich_cartoes == NULL) {
+    printf("Não foi possível abrir o ficheiro de cartões!\n");
+    return;
+  }
+
+  fwrite(&n_cartoes, sizeof(int), 1, fich_cartoes);
+
+  for (int i = 0; i < n_cartoes; i++) {
+    fwrite(&cartoes[i], sizeof(Cartao), 1, fich_cartoes);
+  }
+
+  fclose(fich_cartoes);
+}
+
+void lerFichComprasServicos(CompraServico *compras_servicos, int *n_compras_servicos) {
+  FILE *fich_compras_servicos = fopen("compras_servicos.dat", "rb");
+
+  if (fich_compras_servicos == NULL) {
+    printf("Não foi possível abrir o ficheiro de compras de serviços!\n");
+    return;
+  }
+
+  fread(n_compras_servicos, sizeof(int), 1, fich_compras_servicos);
+
+  for (int i = 0; i < *n_compras_servicos; i++) {
+    fread(&compras_servicos[i], sizeof(CompraServico), 1, fich_compras_servicos);
+  }
+
+  fclose(fich_compras_servicos);
+}
+
+void escreverFichComprasServicos(CompraServico *compras_servicos, int n_compras_servicos) {
+  FILE *fich_compras_servicos = fopen("compras_servicos.dat", "wb+");
+
+  if (fich_compras_servicos == NULL) {
+    printf("Não foi possível abrir o ficheiro de compras de serviços!\n");
+    return;
+  }
+
+  fwrite(&n_compras_servicos, sizeof(int), 1, fich_compras_servicos);
+
+  for (int i = 0; i < n_compras_servicos; i++) {
+    fwrite(&compras_servicos[i], sizeof(CompraServico), 1, fich_compras_servicos);
+  }
+
+  fclose(fich_compras_servicos);
+}
+
+//listar pagamentos 
+
+void listarPagamentos(CompraServico *compras_servicos, int n_compras_servicos) {
+  for (int indiceCompra = 0; indiceCompra < n_compras_servicos; indiceCompra++) {
+    printf("Número de Reserva: %d\n", compras_servicos[indiceCompra].num_reserva);
+    printf("Tipo de Serviço: %s\n", compras_servicos[indiceCompra].tipo_servico);
+    printf("Valor: %.2f\n", compras_servicos[indiceCompra].valor);
+    printf("\n");
+    printf("--------------------------------\n");
+  }
+}
+
+//listar clientes subordinados 
+
+void listarClientesSubordinados(ClienteSubordinado *clientes_subordinados, int n_clientes_subordinados) {
+  for (int indiceCliente = 0; indiceCliente < n_clientes_subordinados; indiceCliente++) {
+    printf("Nome: %s\n", clientes_subordinados[indiceCliente].nome);
+    printf("Morada: %s\n", clientes_subordinados[indiceCliente].morada);
+    printf("Código Postal: %s\n", clientes_subordinados[indiceCliente].codigo_postal);
+    printf("Localidade: %s\n", clientes_subordinados[indiceCliente].localidade);
+    printf("NIF: %s\n", clientes_subordinados[indiceCliente].nif);
+    printf("\n");
+    printf("--------------------------------\n");
+  }
+}
+
+//listar clientes definitivos
+
+
+void listarClientesDefinitivos(ClienteDefinitivo *clientes_definitivos, int n_clientes_definitivos) {
+  for (int indiceCliente = 0; indiceCliente < n_clientes_definitivos; indiceCliente++) {
+    printf("Nome: %s\n", clientes_definitivos[indiceCliente].nome);
+    printf("Morada: %s\n", clientes_definitivos[indiceCliente].morada);
+    printf("Código Postal: %s\n", clientes_definitivos[indiceCliente].codigo_postal);
+    printf("Localidade: %s\n", clientes_definitivos[indiceCliente].localidade);
+    printf("NIF: %s\n", clientes_definitivos[indiceCliente].nif);
+    printf("BI: %s\n", clientes_definitivos[indiceCliente].bi);
+    printf("\n");
+    printf("--------------------------------\n");
+  }
+}
+
+//listar clientes provisorios
+void listarClientesProvisorios(ClienteProvisorio *clientes_provisorios, int n_clientes_provisorios) {
+  for (int indiceCliente = 0; indiceCliente < n_clientes_provisorios; indiceCliente++) {
+    printf("Nome: %s\n", clientes_provisorios[indiceCliente].nome);
+    printf("Morada: %s\n", clientes_provisorios[indiceCliente].morada);
+    printf("Código Postal: %s\n", clientes_provisorios[indiceCliente].codigo_postal);
+    printf("Localidade: %s\n", clientes_provisorios[indiceCliente].localidade);
+    printf("NIF: %s\n", clientes_provisorios[indiceCliente].nif);
+    printf("Data de Criação: %s\n", clientes_provisorios[indiceCliente].data_criacao);
+    printf("Tipo de Cliente: %c\n", clientes_provisorios[indiceCliente].tipo_cliente);
+    printf("\n");
+    printf("--------------------------------\n");
+  }
+}
+
+void menuQuartos(Quarto *quartos, int *numQuartos) {
+  int opcao = 0;
+
+  do {
+    printf("Menu Quartos\n");
+    printf("----------------\n");
+    printf("1 - Registar Quarto\n");
+    printf("2 - Alterar Quarto\n");
+    printf("3 - Eliminar Quarto\n");
+    printf("4 - Listar Quartos\n");
+    printf("0 - Voltar\n");
+    printf("Opção: ");
+  
+    scanf("%d", &opcao);
+  } while (opcao < 0 || opcao > 4);
+
+  switch (opcao) {
+    case 1:
+      registarQuarto(quartos, numQuartos);
+      break;
+    case 2:
+      alterarQuarto(quartos, *numQuartos);
+      break;
+    case 3:
+      // eliminarQuarto();
+      break;
+    case 4:
+      listarQuartos(quartos, *numQuartos);
+      break;
+    case 0:
+      printf("A voltar...\n");
+      break;
+  }
+}
+
+void menuReservas(
+  Quarto *quartos, int *numQuartos,
+  TabelaServicos *servicos, int *numServico,
+  ClienteProvisorio *clientes_provisorios, int *n_clientes_provisorios,
+  ClienteDefinitivo *clientes_definitivos, int *n_clientes_definitivos,
+  ClienteSubordinado *clientes_subordinados, int *n_clientes_subordinados,
+  TabelaPrecosBase *precos_base, int *n_precos_base,
+  TabelaAdicionalEpoca *adicional_epoca, int *n_epoca,
+  Reserva *reservas, int *n_reservas, int *num_reserva,
+  Cartao *cartoes, int *n_cartoes,
+  CompraServico *compras_servicos, int *n_compras_servicos
+) {
+  int opcao = 0;
+
+  do {
+    printf("Menu Reservas\n");
+    printf("----------------\n");
+    printf("1 - Criar Reserva\n");
+    printf("2 - Fazer Check-in\n");
+    printf("3 - Fazer Check-out\n");
+    printf("4 - Listar Reservas\n");
+    printf("0 - Voltar\n");
+    printf("Opção: ");
+  
+    scanf("%d", &opcao);
+  } while (opcao < 0 || opcao > 4);
+
+  switch (opcao) {
+    case 1:
+      criarReserva(reservas, n_reservas, num_reserva, quartos, *numQuartos, precos_base, *n_precos_base, adicional_epoca, *n_epoca, clientes_provisorios, *n_clientes_provisorios);
+      break;
+    case 2:
+      fazerCheckIn(reservas, *n_reservas, quartos, *numQuartos, clientes_provisorios, n_clientes_provisorios, clientes_definitivos, n_clientes_definitivos, clientes_subordinados, n_clientes_subordinados, cartoes, n_cartoes);
+      break;
+    case 3:
+      fazerCheckOut(cartoes, *n_cartoes, reservas, *n_reservas, quartos, *numQuartos, compras_servicos, *n_compras_servicos);
+      break;
+    case 4:
+      listarReservas(reservas, *n_reservas, cartoes, *n_cartoes);
+      break;
+    case 0:
+      printf("A voltar...\n");
+      break;
+  }
+}
+
+void menuClientes(
+  ClienteProvisorio *clientes_provisorios, int *n_clientes_provisorios,
+  ClienteDefinitivo *clientes_definitivos, int *n_clientes_definitivos,
+  ClienteSubordinado *clientes_subordinados, int *n_clientes_subordinados
+) {
+  int opcao = 0;
+
+  do {
+    printf("Menu Clientes\n");
+    printf("----------------\n");
+    printf("1 - Criar Cliente Provisório\n");
+    printf("2 - Alterar Cliente Provisório\n");
+    printf("3 - Apagar Cliente Provisório\n");
+    printf("4 - Listar Clientes Provisórios\n");
+    printf("5 - Listar Clientes Definitivos\n");
+    printf("6 - Listar Clientes Subordinados\n");
+    printf("0 - Sair\n");
+    printf("Opção: ");
+  
+    scanf("%d", &opcao);
+  } while (opcao < 0 || opcao > 6);
+
+  switch (opcao) {
+    case 1:
+      criarFichaClienteProvisorio(clientes_provisorios, n_clientes_provisorios);
+      break;
+    case 2:
+      alterarFichClienteProv(clientes_provisorios, n_clientes_provisorios);
+      break;
+    case 3:
+      eliminarFichClienteProv(clientes_provisorios, n_clientes_provisorios);
+      break;
+    case 4:
+      listarClientesProvisorios(clientes_provisorios, *n_clientes_provisorios);
+      break;
+    case 5:
+      listarClientesDefinitivos(clientes_definitivos, *n_clientes_definitivos); 
+      break;
+    case 6:
+      listarClientesSubordinados(clientes_subordinados, *n_clientes_subordinados);
+      break;
+    case 0:
+      printf("A sair...\n");
+      break;
+  }
+}
+
+void menuServicos(TabelaServicos *servicos, int *numServico, Cartao *cartoes, int *n_cartoes, Reserva *reservas, int *n_reservas, CompraServico *compras_servicos, int *n_compras_servicos) {
+  int opcao = 0;
+
+  do {
+    printf("Menu Serviços\n");
+    printf("----------------\n");
+    printf("1 - Registar Serviço\n");
+    printf("2 - Alterar Serviço\n");
+    printf("3 - Remover Serviço\n");
+    printf("4 - Listar Serviços\n");
+    printf("5 - Comprar Serviços\n");
+    printf("6 - Listar Pagamentos\n");
+    printf("0 - Sair\n");
+    printf("Opção: ");
+  
+    scanf("%d", &opcao);
+  } while (opcao < 0 || opcao > 6);
+
+  switch (opcao) {
+    case 1:
+      registarServico(servicos, numServico);
+      break;
+    case 2:
+      alterarServico(servicos, numServico);
+      break;
+    case 3:
+      removerServico(servicos, numServico);
+      break;
+    case 4:
+      listarServicos(servicos, *numServico);
+      break;
+    case 5:
+      comprarServicos(cartoes, *n_cartoes, servicos, *numServico, reservas, *n_reservas, compras_servicos, n_compras_servicos);
+      break;
+    case 6:
+      listarPagamentos(compras_servicos, *n_compras_servicos);
+      break;
+    case 0:
+      printf("A sair...\n");
+      break;
+  }
+}
+
+int menu(
+  Quarto *quartos, int *numQuartos,
+  TabelaServicos *servicos, int *numServico,
+  ClienteProvisorio *clientes_provisorios, int *n_clientes_provisorios,
+  ClienteDefinitivo *clientes_definitivos, int *n_clientes_definitivos,
+  ClienteSubordinado *clientes_subordinados, int *n_clientes_subordinados,
+  TabelaPrecosBase *precos_base, int *n_precos_base,
+  TabelaAdicionalEpoca *adicional_epoca, int *n_epoca,
+  Reserva *reservas, int *n_reservas, int *num_reserva,
+  Cartao *cartoes, int *n_cartoes,
+  CompraServico *compras_servicos, int *n_compras_servicos
+) {
+  int opcao = 0;
+
+  do {
+    printf("Menu Principal\n");
+    printf("----------------\n");
+    printf("1 - Gerir Quartos\n");
+    printf("2 - Gerir Reservas\n");
+    printf("3 - Gerir Clientes\n");
+    printf("4 - Gerir Serviços\n");
+    printf("0 - Sair\n");
+    printf("Opção: ");
+  
+    scanf("%d", &opcao);
+  } while (opcao < 0 || opcao > 4);
+
+  switch (opcao) {
+    case 1:
+      menuQuartos(quartos, numQuartos);
+      break;
+    case 2:
+      menuReservas(
+        quartos, numQuartos,
+        servicos, numServico,
+        clientes_provisorios, n_clientes_provisorios,
+        clientes_definitivos, n_clientes_definitivos,
+        clientes_subordinados, n_clientes_subordinados,
+        precos_base, n_precos_base,
+        adicional_epoca, n_epoca,
+        reservas, n_reservas, num_reserva,
+        cartoes, n_cartoes,
+        compras_servicos, n_compras_servicos);
+      break;
+    case 3:
+      menuClientes(
+        clientes_provisorios, n_clientes_provisorios,
+        clientes_definitivos, n_clientes_definitivos,
+        clientes_subordinados, n_clientes_subordinados);
+      break;
+    case 4:
+      menuServicos(servicos, numServico, cartoes, n_cartoes, reservas, n_reservas, compras_servicos, n_compras_servicos);
+      break;
+    case 0:
+      printf("A sair...\n");
+      return 1;
+  }
+
+  return 0;
+}
 
 int main() 
 {
+  srand(time(NULL));
+
   setlocale(LC_ALL, "Portuguese");
   int num_reserva = 0; // inicializamos o número de reservas que vão existir no total
   
@@ -1289,23 +2163,65 @@ int main()
   ClienteProvisorio clientes_provisorios[1000];
   int n_clientes_provisorios = 0;
   
+  ClienteDefinitivo clientes_definitivos[1000];
+  int n_clientes_definitivos = 0;
+
+  ClienteSubordinado clientes_subordinados[1000];
+  int n_clientes_subordinados = 0;
+
   TabelaPrecosBase precos_base[16];
   int n_precos_base = 0;
   
   TabelaAdicionalEpoca adicional_epoca[4];
   int n_epoca = 0;
-  
+
   Reserva reservas[1000];
   int n_reservas = 0;
 
+  Cartao cartoes[1000];
+  int n_cartoes = 0;
+
+  CompraServico compras_servicos[1000];
+  int n_compras_servicos = 0;
 
   // Leitura inicial
   lerFichQuartos(quartos, &numQuartos);
   lerFichServicos(servicos, &numServico);
   lerFichClientesProv(clientes_provisorios, &n_clientes_provisorios);
+  lerFichClientesDefinitivos(clientes_definitivos, &n_clientes_definitivos);
+  lerFichClientesSubordinados(clientes_subordinados, &n_clientes_subordinados);
   lerFichPrecosBase(precos_base, &n_precos_base);
   lerEpoca(adicional_epoca, &n_epoca);
   lerFichReservas(reservas, &n_reservas, &num_reserva);
+  lerFichCartoes(cartoes, &n_cartoes);
+  lerFichComprasServicos(compras_servicos, &n_compras_servicos);
+
+  int menu_res = 0;
+
+  while (menu_res == 0) {
+    menu_res = menu(
+      quartos, &numQuartos,
+      servicos, &numServico,
+      clientes_provisorios, &n_clientes_provisorios,
+      clientes_definitivos, &n_clientes_definitivos,
+      clientes_subordinados, &n_clientes_subordinados,
+      precos_base, &n_precos_base,
+      adicional_epoca, &n_epoca,
+      reservas, &n_reservas, &num_reserva,
+      cartoes, &n_cartoes,
+      compras_servicos, &n_compras_servicos
+    );
+
+    escreverFichQuartos(quartos, numQuartos);
+    escreverFichServicos(servicos, numServico);
+    escreverFichClienteProv(clientes_provisorios, n_clientes_provisorios);
+    escreverFichClientesDefinitivos(clientes_definitivos, n_clientes_definitivos);
+    escreverFichClientesSubordinados(clientes_subordinados, n_clientes_subordinados);
+    escreverFichReservas(reservas, n_reservas);
+    escreverFichCartoes(cartoes, n_cartoes);
+    escreverFichComprasServicos(compras_servicos, n_compras_servicos);
+  }
+
 /*
   /*for (int i = 0; i < numServico; i++)
   {
@@ -1344,26 +2260,13 @@ int main()
   //criarFichaClienteProvisorio(clientes_provisorios, &n_clientes_provisorios);
   //alterarFichClienteProv(clientes_provisorios, &n_clientes_provisorios);
   //eliminarFichClienteProv(clientes_provisorios, &n_clientes_provisorios);
-  criarReserva(reservas,&n_reservas ,&num_reserva, quartos, numQuartos, precos_base, n_precos_base, adicional_epoca, n_epoca, clientes_provisorios, n_clientes_provisorios);
+  //criarReserva(reservas,&n_reservas ,&num_reserva, quartos, numQuartos, precos_base, n_precos_base, adicional_epoca, n_epoca, clientes_provisorios, n_clientes_provisorios);
   //listarReservas(reservas, n_reservas);
+  // fazerCheckIn(reservas, n_reservas, quartos, numQuartos, clientes_provisorios, &n_clientes_provisorios, clientes_definitivos, &n_clientes_definitivos, clientes_subordinados, &n_clientes_subordinados, cartoes, &n_cartoes);
 
 
   //menu separado em submenus 
-
-  escreverFichQuartos(quartos, numQuartos);
-  escreverFichServicos(servicos, numServico);
-  escreverFichClienteProv(clientes_provisorios, n_clientes_provisorios);
-  escreverFichReservas(reservas, n_reservas);
 }
 
 
   
-
-
-
-
-
-  
-  
-     
-

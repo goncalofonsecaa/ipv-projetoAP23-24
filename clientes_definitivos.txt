@@ -1,0 +1,2 @@
+Nome	Morada	Código Postal	Localidade	NIF	BI
+Goncalo	Carregal	3430	Viseu	12345	135
