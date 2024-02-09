@@ -1,1 +1,2 @@
 Nome	Morada	Codigo_Postal	Localidade	NIF	Data_Criacao	Tipo_Cliente
+goncalo	Carregal	3430	Viseu	12345	08/02/2024	N

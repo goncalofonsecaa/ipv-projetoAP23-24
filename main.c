@@ -9,7 +9,7 @@
 const int MAX_SERVICOS = 2000;
 const int BUFFER_SIZE = 1056;
 
-// Estrutura para representar a informação de um quarto
+
 typedef struct {
     int torre;
     int andar;
@@ -21,7 +21,7 @@ typedef struct {
     int disponibilidade; // 1 se disponível, 0 se não disponível
 } Quarto;
 
-// Estrutura para representar a ficha de cliente provisória
+
 typedef struct {
     int codigo;
     char nome[50];
@@ -31,7 +31,6 @@ typedef struct {
     char nif[15];
     char data_criacao[15];
     char tipo_cliente; // 'N' para Normal, 'V' para VIP, 'E' para Excelência
-    // Outros campos necessários
 } ClienteProvisorio;
 
 typedef struct {
@@ -54,38 +53,23 @@ typedef struct {
     char data_criacao[15];
     char tipo_cliente; // 'N' para Normal, 'V' para VIP, 'E' para Excelência
     char bi[15];
-    // Outros campos necessários
 } ClienteDefinitivo;
 
-// Estrutura para representar a reserva
+
 typedef struct {
     int num_reserva;
-    char Nif_Cliente[15]; // Código do cliente (provisório ou definitivo)
-    char tipo_ficha_cliente; // 'P' para Provisória, 'D' para Definitiva
+    char Nif_Cliente[15]; // Código do cliente (provisório ou definitivo
     char quarto_codigo[9]; // {torre}0{andar}0{numero}
     char data_checkin[15];
     char data_checkout[15];
     int num_pessoas;
-    int quartos_adicionais[5]; // Máximo de 5 quartos associados a este cliente
     float valor_pago;
     float valor_total;
     char forma_pagamento[20];
     char situacao_reserva; // 'P' para Provisória, 'C' para Confirmada, 'O' para Em Operação, 'F' para Finalizada
     char observacoes[200];
-    // Outros campos necessários
 } Reserva;
 
-// Estrutura para representar os serviços complementares contratados
-typedef struct {
-    int funcionario_registo;
-    char data_hora_registo[25];
-    char tipo_servico[20];
-    char codigo_servico[20];
-    char observacoes[200];
-    // Outros campos necessários
-} Servico;
-
-// Estrutura para representar a tabela de preços base
 typedef struct {
     char vista;
     char qualidade;
@@ -97,7 +81,6 @@ typedef struct {
     float valor_promocao;
 } TabelaPrecosBase;
 
-// Estrutura para representar a tabela de adicional aos valores base conforme a época
 typedef struct {
     //tipo de época
     char TipoEpoca[10];
@@ -106,36 +89,40 @@ typedef struct {
     float percentagem_adicional;
 } TabelaAdicionalEpoca;
 
-// Estrutura para representar a tabela de valores dos serviços complementares
+
 typedef struct {
     char tipo_servico[50];
     float valor;
 } TabelaServicos;
 
-// Estrutura para representar o hotel
 typedef struct {
-    Quarto quartos[2][10][200]; // 2 torres, 10 andares, 200 quartos cada
-    ClienteProvisorio clientes_provisorios[1000]; // Máximo de 1000 clientes provisórios
-    Reserva reservas[1000]; // Máximo de 1000 reservas
-    Servico servicos_contratados[2000]; // Máximo de 2000 serviços contratados
-    TabelaPrecosBase precos_base[16]; // 16 combinações possíveis de vista, qualidade e número de pessoas
-    TabelaAdicionalEpoca adicional_epoca[4]; // 4 épocas possíveis (Baixa, Intermediária, Média, Alta)
-    TabelaServicos servicos_complementares[10]; // 10 tipos de serviços complementares
-    // Outros campos necessários
+    int funcionario_registo;
+    char data_hora_registo[25];
+    char tipo_servico[20];
+    char codigo_servico[20];
+    char observacoes[200];
+} Servico;
+
+typedef struct {
+    Quarto quartos[2][10][200]; 
+    ClienteProvisorio clientes_provisorios[1000]; 
+    Reserva reservas[1000]; 
+    Servico servicos_contratados[2000]; 
+    TabelaPrecosBase precos_base[16]; 
+    TabelaAdicionalEpoca adicional_epoca[4]; 
+    TabelaServicos servicos_complementares[10];
 } Hotel;
  
-// Estrutura para representar os dados de pagamento
 typedef struct {
     char tipo_servico[20];
     int num_reserva;
     float valor;
 } CompraServico;
 
-
 typedef struct {
   char codigo_cartao[5];
   int num_reserva;
-  int estado; // 1 - ativo, 0 - inativo
+  int estado;
 } Cartao;
 
 
@@ -1035,15 +1022,20 @@ void lerEpoca(TabelaAdicionalEpoca *adicional_epoca, int *n_epoca) {
 
 //transformar codigo do quarto em torre0andar0numero
 
-char* transformarCodigoQuarto (int torre, int andar, int numero) {
-  char *codigo = malloc(9 * sizeof(char));
+  char* transformarCodigoQuarto(int torre, int andar, int numero) {
+  char* codigo = malloc(9 * sizeof(char)); // Aloca memória para a string
+  if (codigo == NULL) {
+    // Tratar erro de alocação de memória, se necessário
+    return NULL;
+  }
 
-  // {torre}0{andar}0{numero}
-  sprintf(codigo, "%d0%d0%d", torre, andar, numero);
+  // Preenche a string com o código do quarto
+  sprintf(codigo, "%02d0%02d0%02d", torre, andar, numero);
 
   return codigo;
-}
 
+  }
+  
 void transformarCodigoQuartoInverso(char *codigo, int *torre, int *andar, int *numero) {
   char *token = strtok(codigo, "0");
   *torre = atoi(token);
@@ -1308,7 +1300,141 @@ void criarReserva(Reserva *reservas, int *n_reservas, int *num_reserva, Quarto *
   reservas[*n_reservas] = reserva;
   (*n_reservas)++;  
 }
-//escrever ficheiro binario reservas
+
+
+
+void eliminarReserva(Reserva *reservas, int *n_reservas) {
+  int num_reserva;
+
+  printf("Qual o número da reserva que pretende eliminar: ");
+  scanf("%d", &num_reserva);
+
+  int indice = -1;
+
+  for (int i = 0; i < *n_reservas; i++) {
+    if (reservas[i].num_reserva == num_reserva) {
+      indice = i;
+      break;
+    }
+  }
+
+  if (indice == -1) {
+    printf("Não existe nenhuma reserva com esse número.\n");
+    return;
+  }
+
+  for (int i = indice; i < *n_reservas - 1; i++) {
+    reservas[i] = reservas[i + 1];
+  }
+
+  (*n_reservas)--;
+
+  printf("Reserva eliminada com sucesso!\n");
+}
+
+//alterar reserva alterando tambem o preço tendo em conta os dias , nao alterando os quartos
+
+void alterarReserva (Reserva *reservas, int n_reservas, Quarto *quartos, int n_quartos, TabelaPrecosBase *precos_base, int n_precos_base, TabelaAdicionalEpoca *adicional_epoca, int n_epoca) {
+  int num_reserva;
+
+  printf("Qual o número da reserva que pretende alterar: ");
+  scanf("%d", &num_reserva);
+
+  int indice = -1;
+
+  for (int i = 0; i < n_reservas; i++) {
+    if (reservas[i].num_reserva == num_reserva) {
+      indice = i;
+      break;
+    }
+  }
+
+  if (indice == -1) {
+    printf("Não existe nenhuma reserva com esse número.\n");
+    return;
+  }
+
+  int campo = -1;
+
+  do {
+    printf("Qual campo pretende alterar?\n");
+    printf("1 - Data de Check-in\n");
+    printf("2 - Data de Check-out\n");
+    printf("3 - Número de Pessoas\n");
+    printf("4 - Valor Pago\n");
+    printf("5 - Forma de Pagamento\n");
+    printf("6 - Situação da Reserva\n");
+    printf("7 - Observações\n");
+    printf("0 - Sair\n");
+    printf("Opção: ");
+    scanf("%d", &campo);
+  } while (campo < 0 || campo > 7);
+
+  if (campo == 0) {
+    return;
+  }
+
+  switch (campo) {
+    case 1: {
+      int dia, mes, ano;
+      printf("Qual é a nova data de check-in (dd/mm/aaaa): ");
+      scanf("%d/%d/%d", &dia, &mes, &ano);
+
+      sprintf(reservas[indice].data_checkin, "%02d/%02d/%04d", dia, mes, ano);
+      break;
+    }
+
+    case 2: {
+      int dia, mes, ano;
+      printf("Qual é a nova data de check-out (dd/mm/aaaa): ");
+      scanf("%d/%d/%d", &dia, &mes, &ano);
+
+      sprintf(reservas[indice].data_checkout, "%02d/%02d/%04d", dia, mes, ano);
+      break;
+    }
+
+    case 3: {
+      printf("Qual é o novo número de pessoas: ");
+      scanf("%d", &reservas[indice].num_pessoas);
+      break;
+    }
+
+    case 4: {
+      printf("Qual é o novo valor pago: ");
+      scanf("%f", &reservas[indice].valor_pago);
+      break;
+    }
+
+    case 5: {
+      printf("Qual é a nova forma de pagamento: ");
+      scanf("%s", reservas[indice].forma_pagamento);
+      break;
+    }
+
+    case 6: {
+      printf("Qual é a nova situação da reserva (P, C, O ou F): ");
+      scanf(" %c", &reservas[indice].situacao_reserva);
+      break;
+    }
+
+    case 7: {
+      printf("Qual é a nova observação: ");
+      scanf(" %s", reservas[indice].observacoes);
+      break;
+    }
+
+  }
+
+  printf("Reserva alterada com sucesso!\n");
+
+  int torre, andar, numero;
+
+  transformarCodigoQuartoInverso(reservas[indice].quarto_codigo, &torre, &andar, &numero);
+
+  reservas[indice].valor_total = calcularValorTotalReserva(precos_base, n_precos_base, adicional_epoca, n_epoca, torre, andar, numero, reservas[indice].data_checkin, reservas[indice].data_checkout, reservas[indice].num_pessoas);
+}
+
+
 
 void lerFichReservas(Reserva *reservas, int *n_reservas, int *num_reserva) {
   FILE *fich_reservas = fopen("reservas.dat", "rb");
@@ -1915,6 +2041,108 @@ void listarClientesProvisorios(ClienteProvisorio *clientes_provisorios, int n_cl
   }
 }
 
+//listar reservas com base na data de check in e mostrar os quartos correspondentes à reserva
+
+void listarReservasDataCheckIn(Reserva *reservas, int n_reservas, Quarto *quartos, int n_quartos) {
+  char data_checkin[11];
+
+  printf("Qual a data de check-in (dd/mm/aaaa): ");
+  scanf("%s", data_checkin);
+
+  for (int indiceReserva = 0; indiceReserva < n_reservas; indiceReserva++) {
+    if (strcmp(reservas[indiceReserva].data_checkin, data_checkin) == 0) {
+      printf("Número de Reserva: %d\n", reservas[indiceReserva].num_reserva);
+      printf("NIF do Cliente: %s\n", reservas[indiceReserva].Nif_Cliente);
+      printf("Código do Quarto: %s\n", reservas[indiceReserva].quarto_codigo);
+      printf("Data de Check-in: %s\n", reservas[indiceReserva].data_checkin);
+      printf("Data de Check-out: %s\n", reservas[indiceReserva].data_checkout);
+      printf("Número de Pessoas: %d\n", reservas[indiceReserva].num_pessoas);
+      printf("Valor Total: %.2f\n", reservas[indiceReserva].valor_total);
+      printf("Valor Pago: %.2f\n", reservas[indiceReserva].valor_pago);
+      printf("Forma de Pagamento: %s\n", reservas[indiceReserva].forma_pagamento);
+      printf("Situação da Reserva: %c\n", reservas[indiceReserva].situacao_reserva);
+      printf("Observações: %s\n", reservas[indiceReserva].observacoes);
+      printf("\n");
+      printf("--------------------------------\n");
+
+      int indiceQuarto = -1;
+      char *codigo_quarto = reservas[indiceReserva].quarto_codigo;
+
+      for (int indice = 0; indice < n_quartos; indice++) {
+        if (strcmp(reservas[indiceReserva].quarto_codigo, codigo_quarto) == 0) {
+          indiceQuarto = indice;
+          break;
+        }
+      }
+
+      if (indiceQuarto == -1) {
+        printf("Não existe nenhum quarto com esse código.\n");
+        return;
+      }
+
+
+      printf("Torre: %d\n", quartos[indiceQuarto].torre);
+      printf("Andar: %d\n", quartos[indiceQuarto].andar);
+      printf("Número: %d\n", quartos[indiceQuarto].numero);
+      
+      printf("\n");
+
+      printf("--------------------------------\n");
+
+    }
+
+  }
+
+}
+
+//listar por data de check out
+
+void listarReservasDataCheckOut(Reserva *reservas, int n_reservas , Quarto *quartos, int n_quartos) {
+  char data_checkout[11];
+
+  printf("Qual a data de check-out (dd/mm/aaaa): ");
+  scanf("%s", data_checkout);
+
+  for (int indiceReserva = 0; indiceReserva < n_reservas; indiceReserva++) {
+    if (strcmp(reservas[indiceReserva].data_checkout, data_checkout) == 0) {
+      printf("Número de Reserva: %d\n", reservas[indiceReserva].num_reserva);
+      printf("NIF do Cliente: %s\n", reservas[indiceReserva].Nif_Cliente);
+      printf("Código do Quarto: %s\n", reservas[indiceReserva].quarto_codigo);
+      printf("Data de Check-in: %s\n", reservas[indiceReserva].data_checkin);
+      printf("Data de Check-out: %s\n", reservas[indiceReserva].data_checkout);
+      printf("Número de Pessoas: %d\n", reservas[indiceReserva].num_pessoas);
+      printf("Valor Total: %.2f\n", reservas[indiceReserva].valor_total);
+      printf("Valor Pago: %.2f\n", reservas[indiceReserva].valor_pago);
+      printf("Forma de Pagamento: %s\n", reservas[indiceReserva].forma_pagamento);
+      printf("Situação da Reserva: %c\n", reservas[indiceReserva].situacao_reserva);
+      printf("Observações: %s\n", reservas[indiceReserva].observacoes);
+      printf("\n");
+      printf("--------------------------------\n");
+
+      int indiceQuarto = -1;
+      char *codigo_quarto = reservas[indiceReserva].quarto_codigo;
+
+      for (int indice = 0; indice < n_quartos; indice++) {
+        if (strcmp(reservas[indiceReserva].quarto_codigo, codigo_quarto) == 0) {
+          indiceQuarto = indice;
+          break;
+        }
+      }
+
+      if (indiceQuarto == -1) {
+        printf("Não existe nenhum quarto com esse código.\n");
+        return;
+      }
+
+      printf("Torre: %d\n", quartos[indiceQuarto].torre);
+      printf("Andar: %d\n", quartos[indiceQuarto].andar);
+      printf("Número: %d\n", quartos[indiceQuarto].numero);
+      printf("\n");
+    }
+  }
+}
+  
+
 void menuQuartos(Quarto *quartos, int *numQuartos) {
   int opcao = 0;
 
@@ -1929,7 +2157,7 @@ void menuQuartos(Quarto *quartos, int *numQuartos) {
     printf("Opção: ");
   
     scanf("%d", &opcao);
-  } while (opcao < 0 || opcao > 4);
+  } while (opcao < 0 || opcao > 5);
 
   switch (opcao) {
     case 1:
@@ -1971,11 +2199,15 @@ void menuReservas(
     printf("2 - Fazer Check-in\n");
     printf("3 - Fazer Check-out\n");
     printf("4 - Listar Reservas\n");
+    printf("5 - Eliminar Reserva\n");
+    printf("6 - Alterar Reserva\n");
+    printf("7 - Listar Reservas por Data de Check-in\n");
+    printf("8 - Listar Reservas por Data de Check-out\n");
     printf("0 - Voltar\n");
     printf("Opção: ");
   
     scanf("%d", &opcao);
-  } while (opcao < 0 || opcao > 4);
+  } while (opcao < 0 || opcao > 8);
 
   switch (opcao) {
     case 1:
@@ -1989,6 +2221,19 @@ void menuReservas(
       break;
     case 4:
       listarReservas(reservas, *n_reservas, cartoes, *n_cartoes);
+      break;
+    case 5: 
+      eliminarReserva (reservas, n_reservas);
+      break;
+
+    case 6:
+      alterarReserva(reservas, *n_reservas, quartos, *numQuartos, precos_base, *n_precos_base, adicional_epoca, *n_epoca);
+      break;
+    case 7:
+      listarReservasDataCheckIn(reservas, *n_reservas, quartos, *numQuartos);
+      break;
+    case 8:
+      listarReservasDataCheckOut(reservas, *n_reservas, quartos, *numQuartos);
       break;
     case 0:
       printf("A voltar...\n");
