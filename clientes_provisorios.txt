@@ -1,2 +1,5 @@
 Nome	Morada	Codigo_Postal	Localidade	NIF	Data_Criacao	Tipo_Cliente
-goncalo	Carregal	3430	Viseu	12345	08/02/2024	N
+Diogo	Porto	3430-121	Porto	12345679	11/02/2024	N
+Francisco	Chaves	3430-656	Chaves	1234	12/02/2024	N
+Alice	Setubal	3430-606	Setubal	123456	09/02/2024	E
+Goncalo	Carregal	3430-033	Viseu	12345678	05/02/2024	E

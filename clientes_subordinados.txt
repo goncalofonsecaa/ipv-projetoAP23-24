@@ -1,3 +1,3 @@
 Nome	Morada	Código_Postal	Localidade	NIF
-Joao	Viseu	3430	Viseu	1234
+Joaquim	Coimbra	3430-500	Coimbra	54321
 
